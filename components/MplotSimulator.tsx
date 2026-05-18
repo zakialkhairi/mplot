@@ -172,8 +172,15 @@ export default function MplotSimulator({ region }: { region: RegionConfig }) {
       ),
     [region.matches],
   );
-  const [results, setResults] = useState<ResultState>({});
-  const [activeWeek, setActiveWeek] = useState(weekNumbers[0] ?? 1);
+  const initialResults = useMemo(() => ({ ...region.defaultResults }), [region.defaultResults]);
+  const initialWeek =
+    weekNumbers.find((week) =>
+      region.matches.some((match) => match.week === week && !region.defaultResults[match.id]),
+    ) ??
+    weekNumbers[weekNumbers.length - 1] ??
+    1;
+  const [results, setResults] = useState<ResultState>(initialResults);
+  const [activeWeek, setActiveWeek] = useState(initialWeek);
 
   const teamById = useMemo(
     () => new Map(region.teams.map((team) => [team.id, team])),
@@ -205,6 +212,10 @@ export default function MplotSimulator({ region }: { region: RegionConfig }) {
   }
 
   function resetSimulation() {
+    setResults({ ...region.defaultResults });
+  }
+
+  function clearSimulation() {
     setResults({});
   }
 
@@ -233,13 +244,22 @@ export default function MplotSimulator({ region }: { region: RegionConfig }) {
               </p>
             </div>
           </div>
-          <button
-            type="button"
-            onClick={resetSimulation}
-            className="h-10 rounded-md border border-white/40 bg-white px-4 text-sm font-bold text-[#7f0016] transition hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-white"
-          >
-            Reset Simulasi
-          </button>
+          <div className="flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={resetSimulation}
+              className="h-10 rounded-md border border-white/40 bg-white px-4 text-sm font-bold text-[#7f0016] transition hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-white"
+            >
+              Reset Skor Acuan
+            </button>
+            <button
+              type="button"
+              onClick={clearSimulation}
+              className="h-10 rounded-md border border-white/40 bg-transparent px-4 text-sm font-bold text-white transition hover:bg-white/10 focus:outline-none focus:ring-2 focus:ring-white"
+            >
+              Kosongkan Skor
+            </button>
+          </div>
         </div>
       </header>
 
