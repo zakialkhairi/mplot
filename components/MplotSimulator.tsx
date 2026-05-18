@@ -1,9 +1,11 @@
 "use client";
 
 import Image from "next/image";
+import Link from "next/link";
 import { useMemo, useState } from "react";
-import { matches, scoreOptions, type Score } from "@/data/matches";
-import { teamById, type TeamId } from "@/data/teams";
+import { scoreOptions, type Score } from "@/data/matches";
+import { regions, type RegionCode, type RegionConfig } from "@/data/regions";
+import { type Team } from "@/data/teams";
 import { calculateProbabilities } from "@/lib/probability";
 import {
   calculateQualificationStatuses,
@@ -27,7 +29,6 @@ const statusStyles: Record<QualificationStatus, string> = {
   normal: "border-zinc-200 bg-white text-zinc-700",
 };
 
-const weekNumbers = Array.from({ length: 9 }, (_, index) => index + 1);
 const matchTimes = [
   ["15:15", "18:15"],
   ["14:15", "17:15", "20:15"],
@@ -54,8 +55,9 @@ function formatPercent(value: number) {
   return `${value.toFixed(1)}%`;
 }
 
-function formatMatchDate(week: number, dayOffset: number) {
-  const date = new Date(2026, 2, 27 + (week - 1) * 7 + dayOffset);
+function formatMatchDate(startDate: string, week: number, dayOffset: number) {
+  const [year, month, day] = startDate.split("-").map(Number);
+  const date = new Date(year, month - 1, day + (week - 1) * 7 + dayOffset);
 
   return `${dayNames[date.getDay()]}, ${date.getDate()} ${monthNames[date.getMonth()]} ${date.getFullYear()}`;
 }
@@ -65,9 +67,7 @@ function splitScore(score?: Score) {
   return score.split("-");
 }
 
-function TeamLogo({ teamId, size = 40 }: { teamId: TeamId; size?: number }) {
-  const team = teamById.get(teamId);
-
+function TeamLogo({ team, size = 40 }: { team?: Team; size?: number }) {
   if (!team) return null;
 
   return (
@@ -79,6 +79,56 @@ function TeamLogo({ teamId, size = 40 }: { teamId: TeamId; size?: number }) {
       className="shrink-0 object-contain"
       style={{ height: size, width: size }}
     />
+  );
+}
+
+function RegionSwitcher({ currentRegion }: { currentRegion: RegionCode }) {
+  return (
+    <section className="overflow-hidden rounded-lg border border-zinc-200 bg-white shadow-sm">
+      <div className="border-b border-zinc-200 px-5 py-4">
+        <h2 className="text-lg font-black text-zinc-950">Region</h2>
+      </div>
+      <div className="overflow-x-auto px-4 py-5">
+        <div className="min-w-[520px]">
+          <div className="grid grid-cols-3 items-start">
+            {regions.map((region) => {
+              const isActive = region.code === currentRegion;
+
+              return (
+                <Link
+                  key={region.code}
+                  href={`/${region.code}`}
+                  className={`grid justify-items-center gap-2 text-sm font-black transition ${
+                    isActive ? "text-red-700" : "text-zinc-700 hover:text-red-700"
+                  }`}
+                >
+                  <span
+                    className={`grid h-12 w-12 place-items-center rounded-full border bg-white shadow-sm ${
+                      isActive ? "border-red-300" : "border-zinc-200"
+                    }`}
+                  >
+                    <Image
+                      src={region.flag}
+                      alt={`${region.label} flag`}
+                      width={36}
+                      height={36}
+                      className="h-8 w-8 rounded-full object-cover"
+                    />
+                  </span>
+                  <span>{region.label}</span>
+                  <span
+                    className={`relative z-10 h-3.5 w-3.5 rounded-full ${
+                      isActive ? "bg-red-600" : "bg-black"
+                    }`}
+                  />
+                </Link>
+              );
+            })}
+          </div>
+          <div className="-mt-2.5 h-px border-t border-dashed border-zinc-300" />
+        </div>
+      </div>
+    </section>
   );
 }
 
@@ -113,14 +163,36 @@ function ProbabilityBar({
   );
 }
 
-export default function MplotSimulator() {
+export default function MplotSimulator({ region }: { region: RegionConfig }) {
+  const weekNumbers = useMemo(
+    () =>
+      Array.from(
+        { length: Math.max(...region.matches.map((match) => match.week)) },
+        (_, index) => index + 1,
+      ),
+    [region.matches],
+  );
   const [results, setResults] = useState<ResultState>({});
+  const [activeWeek, setActiveWeek] = useState(weekNumbers[0] ?? 1);
 
-  const standings = useMemo(() => calculateStandings(results), [results]);
-  const statuses = useMemo(() => calculateQualificationStatuses(results), [results]);
-  const probabilities = useMemo(() => calculateProbabilities(results), [results]);
-  const completedMatches = countCompletedMatches(results);
-  const remainingMatches = matches.length - completedMatches;
+  const teamById = useMemo(
+    () => new Map(region.teams.map((team) => [team.id, team])),
+    [region.teams],
+  );
+  const standings = useMemo(
+    () => calculateStandings(results, region.teams, region.matches),
+    [region.matches, region.teams, results],
+  );
+  const statuses = useMemo(
+    () => calculateQualificationStatuses(results, region.teams, region.matches),
+    [region.matches, region.teams, results],
+  );
+  const probabilities = useMemo(
+    () => calculateProbabilities(results, region.teams, region.matches),
+    [region.matches, region.teams, results],
+  );
+  const completedMatches = countCompletedMatches(results, region.matches);
+  const remainingMatches = region.matches.length - completedMatches;
   const probabilityByTeam = new Map(probabilities.teams.map((team) => [team.teamId, team]));
 
   function updateScore(matchId: string, score: Score | "") {
@@ -138,7 +210,10 @@ export default function MplotSimulator() {
 
   return (
     <main className="min-h-screen bg-white text-zinc-950">
-      <header className="sticky top-0 z-30 border-b border-[#5f0010] bg-[#7f0016] text-white shadow-sm">
+      <header
+        className="sticky top-0 z-30 border-b border-black/20 text-white shadow-sm"
+        style={{ backgroundColor: region.accent }}
+      >
         <div className="mx-auto flex max-w-7xl flex-col gap-3 px-4 py-3 sm:flex-row sm:items-center sm:justify-between sm:px-6">
           <div className="flex items-center gap-3">
             <div className="flex h-10 w-10 items-center justify-center overflow-hidden">
@@ -154,7 +229,7 @@ export default function MplotSimulator() {
             <div>
               <p className="text-lg font-black tracking-wide">MPLOT</p>
               <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-red-100">
-                MPL ID S17 Simulator
+                {region.leagueName} {region.seasonName} Simulator
               </p>
             </div>
           </div>
@@ -170,6 +245,8 @@ export default function MplotSimulator() {
 
       <div className="mx-auto max-w-7xl space-y-4 px-4 py-4 sm:px-6">
         <section className="space-y-4">
+          <RegionSwitcher currentRegion={region.code} />
+
           <section className="rounded-lg border border-zinc-200 bg-white p-4 shadow-sm">
             <div className="grid gap-4 md:grid-cols-[1fr_auto] md:items-end">
               <div>
@@ -177,11 +254,11 @@ export default function MplotSimulator() {
                   Live standings calculator
                 </p>
                 <h1 className="mt-1 text-3xl font-black tracking-tight text-zinc-950">
-                  MPL ID Season 17 Playoff Simulator
+                  {region.leagueName} {region.seasonName} Playoff Simulator
                 </h1>
                 <p className="mt-2 max-w-3xl text-sm leading-5 text-zinc-600">
                   Input skor BO3, lihat klasemen bergerak real-time, dan pantau
-                  peluang upper bracket, playoffs, serta eliminasi untuk 9 tim.
+                  peluang upper bracket, playoffs, serta eliminasi untuk {region.teams.length} tim.
                 </p>
               </div>
               <div className="grid grid-cols-3 gap-2 text-center">
@@ -229,7 +306,7 @@ export default function MplotSimulator() {
                     className={`grid grid-cols-[132px_minmax(0,1fr)] items-center gap-2 rounded-md border p-2 shadow-sm ${statusStyles[status]}`}
                   >
                     <div className="flex min-w-0 items-center gap-2">
-                      <TeamLogo teamId={standing.teamId} size={26} />
+                      <TeamLogo team={team} size={26} />
                       <div className="min-w-0">
                         <h3 className="truncate text-xs font-black text-zinc-950">
                           {team?.name}
@@ -289,7 +366,7 @@ export default function MplotSimulator() {
                         <td className="px-4 py-3 font-black">{index + 1}</td>
                         <td className="px-4 py-3">
                           <div className="flex items-center gap-3">
-                            <TeamLogo teamId={row.teamId} />
+                            <TeamLogo team={team} />
                             <div>
                               <p className="font-black text-zinc-950">{team?.name}</p>
                               <p className="text-xs font-semibold text-zinc-500">
@@ -334,40 +411,39 @@ export default function MplotSimulator() {
               <div>
                 <h2 className="text-lg font-black text-zinc-950">Match Input</h2>
                 <p className="text-sm text-zinc-600">
-                  Pilih Week 1-9 pada timeline. Hanya satu week yang tampil agar
-                  jadwal lebih luas dan mudah dibaca.
+                  Pilih Week {weekNumbers[0]}-{weekNumbers[weekNumbers.length - 1]} pada timeline.
+                  Hanya satu week yang tampil agar jadwal lebih luas dan mudah dibaca.
                 </p>
               </div>
               <p className="text-sm font-black text-[#7f0016]">
-                {completedMatches} dari {matches.length} match terisi
+                {completedMatches} dari {region.matches.length} match terisi
               </p>
             </div>
           </div>
 
           <div className="week-tabs">
-            {weekNumbers.map((week) => (
-              <input
-                key={`input-${week}`}
-                id={`week-tab-${week}`}
-                name="match-week"
-                type="radio"
-                defaultChecked={week === 1}
-                className="sr-only"
-              />
-            ))}
-
             <div className="overflow-x-auto border-b border-zinc-200 px-4 py-5">
-              <div className="min-w-[860px]">
-                <div className="week-timeline grid grid-cols-9 items-start">
+              <div className="min-w-[680px]">
+                <div
+                  className="week-timeline grid items-start"
+                  style={{ gridTemplateColumns: `repeat(${weekNumbers.length}, minmax(0, 1fr))` }}
+                >
                   {weekNumbers.map((week) => (
-                    <label
+                    <button
                       key={`label-${week}`}
-                      htmlFor={`week-tab-${week}`}
-                      className="week-tab-label grid cursor-pointer justify-items-center gap-2 text-sm font-black text-zinc-700 transition hover:text-[#7f0016]"
+                      type="button"
+                      onClick={() => setActiveWeek(week)}
+                      className={`week-tab-label grid cursor-pointer justify-items-center gap-2 text-sm font-black transition ${
+                        activeWeek === week ? "text-red-700" : "text-zinc-700 hover:text-red-700"
+                      }`}
                     >
                       <span>Week {week}</span>
-                      <span className="week-dot relative z-10 h-3.5 w-3.5 rounded-full bg-black" />
-                    </label>
+                      <span
+                        className={`week-dot relative z-10 h-3.5 w-3.5 rounded-full ${
+                          activeWeek === week ? "bg-red-600" : "bg-black"
+                        }`}
+                      />
+                    </button>
                   ))}
                 </div>
                 <div className="-mt-2.5 h-px border-t border-dashed border-zinc-300" />
@@ -375,8 +451,10 @@ export default function MplotSimulator() {
             </div>
 
             <div className="week-panels">
-              {weekNumbers.map((week) => {
-                const weekMatches = matches.filter((match) => match.week === week);
+              {weekNumbers
+                .filter((week) => week === activeWeek)
+                .map((week) => {
+                const weekMatches = region.matches.filter((match) => match.week === week);
                 const weekGroups = [
                   weekMatches.slice(0, 2),
                   weekMatches.slice(2, 5),
@@ -387,7 +465,7 @@ export default function MplotSimulator() {
                   <div
                     key={`panel-${week}`}
                     data-week-panel={week}
-                    className="week-panel gap-4 p-4 lg:grid-cols-3"
+                    className="grid gap-4 p-4 lg:grid-cols-3"
                   >
                     {weekGroups.map((group, dayIndex) => (
                       <section
@@ -396,7 +474,7 @@ export default function MplotSimulator() {
                       >
                         <div className="border-b border-dashed border-zinc-300 px-4 py-3 text-center">
                           <h3 className="text-base font-black text-zinc-700">
-                            {formatMatchDate(week, dayIndex)}
+                            {formatMatchDate(region.startDate, week, dayIndex)}
                           </h3>
                         </div>
 
@@ -412,7 +490,7 @@ export default function MplotSimulator() {
                                 className="grid grid-cols-[58px_28px_minmax(90px,1fr)_28px_58px] items-center gap-2 px-3 py-4 sm:grid-cols-[64px_32px_minmax(96px,1fr)_32px_64px]"
                               >
                                 <div className="grid justify-items-center gap-1 text-center">
-                                  <TeamLogo teamId={match.teamA} size={36} />
+                                  <TeamLogo team={teamA} size={36} />
                                   <span className="max-w-[58px] truncate text-xs font-black text-zinc-700 sm:max-w-[64px] sm:text-sm">
                                     {teamA?.id}
                                   </span>
@@ -424,7 +502,7 @@ export default function MplotSimulator() {
 
                                 <div className="grid justify-items-center gap-2">
                                   <span className="text-xs font-black text-zinc-700">
-                                    {matchTimes[dayIndex][matchIndex]}
+                                    {matchTimes[dayIndex][matchIndex] ?? "--:--"}
                                   </span>
                                   <select
                                     value={results[match.id] ?? ""}
@@ -448,7 +526,7 @@ export default function MplotSimulator() {
                                 </span>
 
                                 <div className="grid justify-items-center gap-1 text-center">
-                                  <TeamLogo teamId={match.teamB} size={36} />
+                                  <TeamLogo team={teamB} size={36} />
                                   <span className="max-w-[58px] truncate text-xs font-black text-zinc-700 sm:max-w-[64px] sm:text-sm">
                                     {teamB?.id}
                                   </span>

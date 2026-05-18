@@ -1,5 +1,5 @@
-import MplotSimulator from "@/components/MplotSimulator";
+import { redirect } from "next/navigation";
 
 export default function Home() {
-  return <MplotSimulator />;
+  redirect("/id");
 }

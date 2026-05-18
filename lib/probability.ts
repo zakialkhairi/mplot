@@ -1,5 +1,5 @@
-import { matches, scoreOptions, type Match, type Score } from "@/data/matches";
-import { teams, type TeamId } from "@/data/teams";
+import { scoreOptions, type Match, type Score } from "@/data/matches";
+import { type Team, type TeamId } from "@/data/teams";
 import { calculateStandings, type ResultState } from "./standings";
 
 export type TeamProbability = {
@@ -17,14 +17,14 @@ export type ProbabilitySummary = {
 
 type Counter = Record<TeamId, { upper: number; playoffs: number; eliminated: number }>;
 
-function createCounters(): Counter {
+function createCounters(teams: Team[]): Counter {
   return Object.fromEntries(
     teams.map((team) => [team.id, { upper: 0, playoffs: 0, eliminated: 0 }]),
   ) as Counter;
 }
 
-function recordScenario(results: ResultState, counters: Counter) {
-  const standings = calculateStandings(results);
+function recordScenario(results: ResultState, counters: Counter, teams: Team[], matches: Match[]) {
+  const standings = calculateStandings(results, teams, matches);
 
   standings.forEach((standing, index) => {
     if (index < 2) counters[standing.teamId].upper += 1;
@@ -33,7 +33,7 @@ function recordScenario(results: ResultState, counters: Counter) {
   });
 }
 
-function seedFromResults(results: ResultState) {
+function seedFromResults(results: ResultState, matches: Match[]) {
   const source = matches.map((match) => `${match.id}:${results[match.id] ?? "-"}`).join("|");
   let seed = 2166136261;
 
@@ -56,7 +56,12 @@ function nextRandom(seed: number) {
   };
 }
 
-function finalize(counters: Counter, scenarios: number, mode: ProbabilitySummary["mode"]) {
+function finalize(
+  counters: Counter,
+  scenarios: number,
+  mode: ProbabilitySummary["mode"],
+  teams: Team[],
+) {
   const divisor = Math.max(scenarios, 1);
 
   return {
@@ -71,14 +76,14 @@ function finalize(counters: Counter, scenarios: number, mode: ProbabilitySummary
   };
 }
 
-function exactSimulation(baseResults: ResultState, remaining: Match[]) {
-  const counters = createCounters();
+function exactSimulation(baseResults: ResultState, remaining: Match[], teams: Team[], matches: Match[]) {
+  const counters = createCounters(teams);
   let scenarios = 0;
 
   function walk(index: number, draft: ResultState) {
     if (index === remaining.length) {
       scenarios += 1;
-      recordScenario(draft, counters);
+      recordScenario(draft, counters, teams, matches);
       return;
     }
 
@@ -89,13 +94,18 @@ function exactSimulation(baseResults: ResultState, remaining: Match[]) {
   }
 
   walk(0, { ...baseResults });
-  return finalize(counters, scenarios, "exact");
+  return finalize(counters, scenarios, "exact", teams);
 }
 
-function monteCarloSimulation(baseResults: ResultState, remaining: Match[]) {
-  const counters = createCounters();
+function monteCarloSimulation(
+  baseResults: ResultState,
+  remaining: Match[],
+  teams: Team[],
+  matches: Match[],
+) {
+  const counters = createCounters(teams);
   const scenarioCount = Math.min(2600, Math.max(1400, remaining.length * 48));
-  let seed = seedFromResults(baseResults);
+  let seed = seedFromResults(baseResults, matches);
 
   for (let scenario = 0; scenario < scenarioCount; scenario += 1) {
     const draft: ResultState = { ...baseResults };
@@ -106,24 +116,28 @@ function monteCarloSimulation(baseResults: ResultState, remaining: Match[]) {
       draft[match.id] = scoreOptions[Math.floor(random.value * scoreOptions.length)] as Score;
     }
 
-    recordScenario(draft, counters);
+    recordScenario(draft, counters, teams, matches);
   }
 
-  return finalize(counters, scenarioCount, "monte-carlo");
+  return finalize(counters, scenarioCount, "monte-carlo", teams);
 }
 
-export function calculateProbabilities(results: ResultState): ProbabilitySummary {
+export function calculateProbabilities(
+  results: ResultState,
+  teams: Team[],
+  matches: Match[],
+): ProbabilitySummary {
   const remaining = matches.filter((match) => !results[match.id]);
 
   if (remaining.length === 0) {
-    const counters = createCounters();
-    recordScenario(results, counters);
-    return finalize(counters, 1, "exact");
+    const counters = createCounters(teams);
+    recordScenario(results, counters, teams, matches);
+    return finalize(counters, 1, "exact", teams);
   }
 
   if (remaining.length <= 7) {
-    return exactSimulation(results, remaining);
+    return exactSimulation(results, remaining, teams, matches);
   }
 
-  return monteCarloSimulation(results, remaining);
+  return monteCarloSimulation(results, remaining, teams, matches);
 }

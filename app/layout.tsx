@@ -17,9 +17,9 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "MPLOT | MPL ID S17 Playoff Simulator",
+  title: "MPLOT | MPL Playoff Simulator",
   description:
-    "Simulator klasemen dan probabilitas playoff MPL ID Season 17.",
+    "Simulator klasemen dan probabilitas playoff untuk MPL ID, PH, dan MY.",
 };
 
 export default function RootLayout({
