@@ -475,6 +475,11 @@ const defaultResults: Record<RegionCode, Partial<Record<string, Score>>> = {
     "my-w7-m5": "2-0",
     "my-w7-m6": "2-1",
     "my-w7-m7": "0-2",
+    "my-w8-m1": "2-0",
+    "my-w8-m2": "0-2",
+    "my-w8-m3": "2-1",
+    "my-w8-m4": "2-1",
+    "my-w8-m5": "2-1",
   },
 };
 
