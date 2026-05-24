@@ -366,6 +366,9 @@ const defaultResults: Record<RegionCode, Partial<Record<string, Score>>> = {
     "id-w9-m3": "0-2",
     "id-w9-m4": "1-2",
     "id-w9-m5": "2-1",
+    "id-w9-m6": "1-2",
+    "id-w9-m7": "2-0",
+    "id-w9-m8": "1-2",
   },
   ph: {
     "ph-w1-m1": "2-1",
@@ -480,6 +483,8 @@ const defaultResults: Record<RegionCode, Partial<Record<string, Score>>> = {
     "my-w8-m3": "2-1",
     "my-w8-m4": "2-1",
     "my-w8-m5": "2-1",
+    "my-w8-m6": "2-0",
+    "my-w8-m7": "2-0",
   },
 };
 
