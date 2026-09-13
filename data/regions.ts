@@ -333,6 +333,9 @@ const defaultResults: Record<RegionCode, Partial<Record<string, Score>>> = {
     "id-w5-m3": "2-0",
     "id-w5-m4": "2-0",
     "id-w5-m5": "2-0",
+    "id-w5-m6": "0-2",
+    "id-w5-m7": "0-2",
+
   },
   ph: {
     "ph-w1-m1": "2-1",
