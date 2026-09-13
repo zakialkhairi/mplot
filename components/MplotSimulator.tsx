@@ -30,9 +30,9 @@ const statusStyles: Record<QualificationStatus, string> = {
 };
 
 const matchTimes = [
-  ["15:15", "18:15"],
-  ["14:15", "17:15", "20:15"],
-  ["14:15", "17:15", "20:15"],
+  ["15:00", "18:00"],
+  ["14:00", "17:00", "20:00"],
+  ["14:00", "17:00", "20:00"],
 ];
 const dayNames = ["Minggu", "Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu"];
 const monthNames = [
