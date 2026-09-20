@@ -29,11 +29,23 @@ const statusStyles: Record<QualificationStatus, string> = {
   normal: "border-zinc-200 bg-white text-zinc-700",
 };
 
-const matchTimes = [
-  ["15:00", "18:00"],
-  ["14:00", "17:00", "20:00"],
-  ["14:00", "17:00", "20:00"],
-];
+const matchTimesByRegion: Record<RegionCode, string[][]> = {
+  id: [
+    ["15:00", "18:00"],
+    ["14:00", "17:00", "20:00"],
+    ["14:00", "17:00", "20:00"],
+  ],
+  ph: [
+    ["17:00", "19:30"],
+    ["14:30", "17:00", "19:30"],
+    ["17:00", "19:30"],
+  ],
+  my: [
+    ["17:00", "20:15"],
+    ["14:30", "17:00", "20:15"],
+    ["14:30", "17:00"],
+  ],
+};
 const dayNames = ["Minggu", "Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu"];
 const monthNames = [
   "Januari",
@@ -522,7 +534,7 @@ export default function MplotSimulator({ region }: { region: RegionConfig }) {
 
                                 <div className="grid justify-items-center gap-2">
                                   <span className="text-xs font-black text-zinc-700">
-                                    {matchTimes[dayIndex][matchIndex] ?? "--:--"}
+                                    {matchTimesByRegion[region.code]?.[dayIndex]?.[matchIndex] ?? "--:--"}
                                   </span>
                                   <select
                                     value={results[match.id] ?? ""}
@@ -530,7 +542,8 @@ export default function MplotSimulator({ region }: { region: RegionConfig }) {
                                       updateScore(match.id, event.target.value as Score | "")
                                     }
                                     aria-label={`${teamA?.name} vs ${teamB?.name} score`}
-                                    className="h-8 w-full max-w-[104px] rounded bg-[#7f0016] px-2 text-center text-xs font-black text-white outline-none transition focus:ring-2 focus:ring-red-200"
+                                    style={{ backgroundColor: region.accent }}
+                                    className="h-8 w-full max-w-[104px] rounded px-2 text-center text-xs font-black text-white outline-none transition focus:ring-2 focus:ring-white/40"
                                   >
                                     <option value="">Score</option>
                                     {scoreOptions.map((score) => (
