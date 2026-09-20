@@ -14,6 +14,7 @@ export type RegionConfig = {
   teams: Team[];
   matches: Match[];
   defaultResults: Partial<Record<string, Score>>;
+  initialWeek?: number;
 };
 
 const regionCodes: RegionCode[] = ["id", "ph", "my"];
@@ -451,6 +452,7 @@ export const regions: RegionConfig[] = [
     teams: idTeams,
     matches: createMatchesFromWeekly("id", idWeeklyMatches),
     defaultResults: defaultResults.id,
+    initialWeek: 7,
   },
   {
     code: "ph",

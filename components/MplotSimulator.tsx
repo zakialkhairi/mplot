@@ -186,6 +186,7 @@ export default function MplotSimulator({ region }: { region: RegionConfig }) {
   );
   const initialResults = useMemo(() => ({ ...region.defaultResults }), [region.defaultResults]);
   const initialWeek =
+    region.initialWeek ??
     weekNumbers.find((week) =>
       region.matches.some((match) => match.week === week && !region.defaultResults[match.id]),
     ) ??
