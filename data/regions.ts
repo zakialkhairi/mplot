@@ -359,6 +359,9 @@ const defaultResults: Record<RegionCode, Partial<Record<string, Score>>> = {
     "id-w8-m3": "2-1",
     "id-w8-m4": "0-2",
     "id-w8-m5": "0-2",
+    "id-w8-m6": "0-2",
+    "id-w8-m7": "1-2",
+    "id-w8-m8": "0-2",
   },
   ph: {
     "ph-w1-m1": "0-2",
@@ -466,7 +469,7 @@ export const regions: RegionConfig[] = [
     teams: idTeams,
     matches: createMatchesFromWeekly("id", idWeeklyMatches),
     defaultResults: defaultResults.id,
-    initialWeek: 8,
+    initialWeek: 9,
   },
   {
     code: "ph",
